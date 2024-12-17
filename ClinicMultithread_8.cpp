@@ -6,6 +6,7 @@
 #include <iostream>
 #include <pthread.h>
 #include <queue>
+#include <random>
 #if _WIN32
 #include <windows.h>
 #define sleep(x) Sleep(x)
@@ -54,6 +55,10 @@ bool allDutyDoctorsFinished = false;
 // Файл вывода
 FILE *log_file = NULL;
 auto program_start = std::chrono::high_resolution_clock::now();
+
+// Генератор случайных чисел
+std::mt19937 rng(42);
+std::uniform_int_distribution<int> specialist_dist(0, 2);
 
 // Функция для получения времени с момента старта программы
 std::string get_time_since_start() {
@@ -136,7 +141,7 @@ void *duty_doctor_thread(void *arg) {
     sleep(t_d);
 
     // Определяем специалиста (случайно)
-    p.specialist_type = static_cast<SpecialistType>(rand() % 3);
+    p.specialist_type = static_cast<SpecialistType>(specialist_dist(rng));
     const char *specName = (p.specialist_type == DENTIST) ? "стоматологу"
                            : (p.specialist_type == SURGEON) ? "хирургу"
                                                             : "терапевту";
