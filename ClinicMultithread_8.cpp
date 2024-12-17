@@ -1,4 +1,5 @@
-﻿#include <cstdio>
+﻿#include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -43,6 +44,8 @@ pthread_cond_t commonQueueNotEmpty = PTHREAD_COND_INITIALIZER;
 std::queue<Patient> specialistQueue[3];
 pthread_mutex_t specialistLock[3];
 pthread_cond_t specialistNotEmpty[3];
+pthread_mutex_t consoleLogLock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t fileLogLock = PTHREAD_MUTEX_INITIALIZER;
 
 // Флаг остановки обработки
 bool stopProcessing = false;
@@ -50,19 +53,42 @@ bool allDutyDoctorsFinished = false;
 
 // Файл вывода
 FILE *log_file = NULL;
+auto program_start = std::chrono::high_resolution_clock::now();
+
+// Функция для получения времени с момента старта программы
+std::string get_time_since_start() {
+  auto now = std::chrono::high_resolution_clock::now();
+  auto elapsed =
+      std::chrono::duration_cast<std::chrono::milliseconds>(now - program_start)
+          .count();
+  int minutes = elapsed / 60000;
+  int seconds = (elapsed / 1000) % 60;
+  int milliseconds = elapsed % 1000;
+  char buffer[20];
+  sprintf(buffer, "[%02d:%02d:%03d]", minutes, seconds, milliseconds);
+  return std::string(buffer);
+}
 
 // Функция логирования
 void log_event(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
+
+  std::string time_str = get_time_since_start();
   // Вывод в консоль
+  pthread_mutex_lock(&consoleLogLock);
+  printf("%s ", time_str.c_str());
   vprintf(fmt, args);
+  pthread_mutex_unlock(&consoleLogLock);
 
   // Вывод в файл
   if (log_file) {
+    pthread_mutex_lock(&fileLogLock);
+    fprintf(log_file, "%s ", time_str.c_str());
     va_list args2;
     va_copy(args2, args);
     vfprintf(log_file, fmt, args2);
+    pthread_mutex_unlock(&fileLogLock);
 
     va_end(args2);
   }
@@ -294,7 +320,7 @@ int main(int argc, char **argv) {
     pthread_join(specialists[i], NULL);
   }
 
-  log_event("\nВсе пациенты вылечены.\n");
+  log_event("Все пациенты вылечены.\n");
 
   fclose(log_file);
 
