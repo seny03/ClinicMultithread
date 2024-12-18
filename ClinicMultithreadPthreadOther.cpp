@@ -136,7 +136,7 @@ void *patient_thread(void *arg) {
   // Добавляем пациента в очередь к дежурным
   pthread_mutex_lock(&commonQueueLock);
   commonQueue.push(p);
-  log_event("Пациент P%d встал в очередь к дежурным\n", p->id);
+  log_event("Patient P%d entered the queue to duty doctors\n", p->id);
   pthread_cond_signal(&commonQueueNotEmpty);
   pthread_mutex_unlock(&commonQueueLock);
 
@@ -145,7 +145,7 @@ void *patient_thread(void *arg) {
   pthread_cond_wait(&p->treated, &p->patientLock);
   pthread_mutex_unlock(&p->patientLock);
 
-  log_event("Пациент P%d полностью вылечен и пошел домой\n", p->id);
+  log_event("Patient P%d fully treated and went home\n", p->id);
   delete p; // Освобождаем память под пациента
   return NULL;
 }
@@ -178,15 +178,15 @@ void *duty_doctor_thread(void *arg) {
     pthread_mutex_unlock(&commonQueueLock);
 
     // Принимаем пациента
-    log_event("Дежурный D%d принял пациента P%d\n", did, p->id);
+    log_event("Duty Doctor D%d accepted patient P%d\n", did, p->id);
     sleep_ms(t_d); // Имитируем время приема
 
     // Определяем специалиста
     p->specialist_type = static_cast<SpecialistType>(specialist_dist(rng));
-    const char *specName = (p->specialist_type == DENTIST) ? "стоматологу"
-                           : (p->specialist_type == SURGEON) ? "хирургу"
-                                                             : "терапевту";
-    log_event("Дежурный D%d направил пациента P%d к %s\n", did, p->id,
+    const char *specName = (p->specialist_type == DENTIST)   ? "Dentist"
+                           : (p->specialist_type == SURGEON) ? "Surgeon"
+                                                             : "Therapist";
+    log_event("Duty Doctor D%d referred patient P%d to %s\n", did, p->id,
               specName);
 
     // Добавляем пациента в очередь к специалисту
@@ -216,7 +216,7 @@ void *duty_doctor_thread(void *arg) {
   }
 
 end_duty:
-  log_event("Дежурный D%d закончил свой рабочий день\n", did);
+  log_event("Duty Doctor D%d ended his workday\n", did);
   return NULL;
 }
 
@@ -225,9 +225,9 @@ void *specialist_thread(void *arg) {
   int sid = *(int *)arg; // Извлекаем id специалиста
   delete (int *)arg;     // Освобождаем память под id
 
-  const char *specName = (sid == DENTIST)   ? "Стоматолог"
-                         : (sid == SURGEON) ? "Хирург"
-                                            : "Терапевт";
+  const char *specName = (sid == DENTIST)   ? "Dentist"
+                         : (sid == SURGEON) ? "Surgeon"
+                                            : "Therapist";
 
   while (true) {
     pthread_mutex_lock(&specialistLock[sid]);
@@ -252,9 +252,9 @@ void *specialist_thread(void *arg) {
     pthread_mutex_unlock(&specialistLock[sid]);
 
     // Лечение пациента
-    log_event("%s начал лечение пациента P%d\n", specName, p->id);
+    log_event("%s started treating patient P%d\n", specName, p->id);
     sleep_ms(t_s); // Имитируем время лечения
-    log_event("%s закончил лечение пациента P%d\n", specName, p->id);
+    log_event("%s finished treating patient P%d\n", specName, p->id);
 
     // Уведомляем пациента
     pthread_mutex_lock(&p->patientLock);
@@ -263,7 +263,7 @@ void *specialist_thread(void *arg) {
   }
 
 end_specialist:
-  log_event("%s закончил свой рабочий день\n", specName);
+  log_event("%s ended his workday\n", specName);
   return NULL;
 }
 
@@ -281,11 +281,11 @@ void print_help() {
 
 // Функция отображения заданных для симуляции параметров
 void log_parameters() {
-  log_event("Параметры задачи:\n");
-  log_event("Количество пациентов: %d\n", N);
-  log_event("Время приема дежурного врача (мс): %d\n", t_d);
-  log_event("Время приема специалиста (мс): %d\n", t_s);
-  log_event("Файл для вывода логов: %s\n\n", output_filename.c_str());
+  log_event("Simulation Parameters:\n");
+  log_event("Number of patients: %d\n", N);
+  log_event("Duty doctor's processing time (ms): %d\n", t_d);
+  log_event("Specialist's treatment time (ms): %d\n", t_s);
+  log_event("Log file: %s\n\n", output_filename.c_str());
 }
 
 // Функция парсинга командной строки или файла
@@ -309,19 +309,19 @@ bool parse_args(int argc, char **argv) {
   }
 
   if (from_file) { // Если нужно читать из файла конфигурации
-    std::ifstream fin(config_filename.c_str());
-    if (!fin) {
-      std::cerr << "Не удалось открыть файл конфигурации\n";
-      return false;
+    std::ifstream fin(config_filename.c_str()); // Открываем файл
+    if (!fin) { // Если не удалось открыть
+      std::cerr << "Failed to open configuration file\n"; // Сообщаем об ошибке
+      return false; // Возвращаем false
     }
-    std::string line;
+    std::string line;                 // Строка для чтения
     while (std::getline(fin, line)) { // Читаем построчно
       if (line.find("n=") == 0) {
-        N = atoi(line.substr(2).c_str());
+        N = atoi(line.substr(2).c_str()); // Читаем N
       } else if (line.find("t_d=") == 0) {
-        t_d = atoi(line.substr(4).c_str());
+        t_d = atoi(line.substr(4).c_str()); // Читаем t_d
       } else if (line.find("t_s=") == 0) {
-        t_s = atoi(line.substr(4).c_str());
+        t_s = atoi(line.substr(4).c_str()); // Читаем t_s
       } else if (line.find("o=") == 0) {
         output_filename =
             line.substr(2); // Исправлено: substr(2) вместо substr(7)
@@ -329,12 +329,11 @@ bool parse_args(int argc, char **argv) {
     }
   }
 
-  return true;
+  return true; // Возвращаем true если всё ОК
 }
 
 int main(int argc, char **argv) {
   setlocale(LC_ALL, "ru"); // Устанавливаем локаль (русский язык)
-  srand(time(NULL)); // Инициализируем генератор случайных чисел
 
   // Инициализируем атрибут для адаптивных мьютексов
   pthread_mutexattr_init(&adaptive_attr);
@@ -360,14 +359,14 @@ int main(int argc, char **argv) {
 
   // Парсим аргументы командной строки или файла конфигурации
   if (!parse_args(argc, argv)) {
-    std::cerr << "Ошибка при чтении параметров\n";
+    std::cerr << "Error reading parameters\n"; // Переведено
     return 1;
   }
 
   // Открываем файл логов на запись
   log_file = fopen(output_filename.c_str(), "w+");
   if (!log_file) {
-    std::cerr << "Не удалось открыть файл вывода\n";
+    std::cerr << "Failed to open output file\n"; // Переведено
     return 1;
   }
 
@@ -400,8 +399,8 @@ int main(int argc, char **argv) {
     pthread_join(patients[i], NULL); // Ждем завершения потока пациента
   }
 
-  log_event(
-      "Все пациенты вылечены\n"); // Логируем завершение лечения всех пациентов
+  log_event("All patients have been treated\n"); // Логируем завершение лечения
+                                                 // всех пациентов
 
   // Разбудим дежурных врачей, чтобы они могли завершить работу
   for (int i = 0; i < 2; i++) {
@@ -429,7 +428,7 @@ int main(int argc, char **argv) {
   }
 
   log_event(
-      "Рабочий день в больнице завершен\n"); // Логируем завершение рабочего дня
+      "The hospital workday has ended\n"); // Логируем завершение рабочего дня
 
   // Удаляем мьютексы и условные переменные
   for (int i = 0; i < 3; i++) {
@@ -440,13 +439,12 @@ int main(int argc, char **argv) {
   pthread_mutex_destroy(
       &commonQueueLock); // Уничтожаем мьютекс очереди дежурных
   pthread_cond_destroy(
-      &commonQueueNotEmpty); // Уничтожаем условную переменную очереди дежурных
+      &commonQueueNotEmpty); // Уничтожаем условную переменную для дежурных
 
-  // Разрушение spinlock'ов
-  pthread_spin_destroy(&consoleLogLock); // Уничтожаем spinlock консоли
-  pthread_spin_destroy(&fileLogLock); // Уничтожаем spinlock файла
+  pthread_spin_destroy(&consoleLogLock); // Уничтожаем мьютекс консоли
+  pthread_spin_destroy(&fileLogLock); // Уничтожаем мьютекс файла
   pthread_spin_destroy(
-      &patientsToSpecialistLock); // Уничтожаем spinlock счетчика
+      &patientsToSpecialistLock); // Уничтожаем мьютекс счетчика
 
   // Разрушение адаптивных атрибутов
   pthread_mutexattr_destroy(&adaptive_attr);

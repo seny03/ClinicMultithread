@@ -176,7 +176,7 @@ void duty_doctor(int did) {
     }
   }
 
-  log_event("Duty Doctor D%d ended their workday\n", did);
+  log_event("Duty Doctor D%d ended his workday\n", did);
 }
 
 // Функция обработки пациента специалистом
@@ -219,7 +219,7 @@ void specialist(int sid) {
     }
   }
 
-  log_event("%s ended their workday\n", specName);
+  log_event("%s ended his workday\n", specName);
 }
 
 // Функция отображения справки
@@ -289,7 +289,6 @@ bool parse_args(int argc, char **argv) {
 
 int main(int argc, char **argv) {
   setlocale(LC_ALL, "ru"); // Устанавливаем локаль (русский язык)
-  srand(time(NULL)); // Инициализируем генератор случайных чисел
 
   // Инициализируем блокировки
   omp_init_lock(&commonQueueLock);
