@@ -309,7 +309,6 @@ bool parse_args(int argc, char **argv) {
     }
   }
 
-  log_parameters();
   return true;
 }
 
@@ -322,11 +321,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  log_file = fopen(output_filename.c_str(), "w");
+  log_file = fopen(output_filename.c_str(), "w+");
   if (!log_file) {
     std::cerr << "Не удалось открыть файл вывода\n";
     return 1;
   }
+
+  log_parameters();
 
   // Инициализируем мьютексы для специалистов
   for (int i = 0; i < 3; i++) {
@@ -392,7 +393,7 @@ int main(int argc, char **argv) {
   }
 
   log_event("Рабочий день в больнице завершен\n");
-  
+
   // Удаляем мьютексы и условные переменные
   for (int i = 0; i < 3; i++) {
     pthread_mutex_destroy(&specialistLock[i]);
