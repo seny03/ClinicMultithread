@@ -260,6 +260,15 @@ void print_help() {
             << "  --help [-h]    Display this help message\n";
 }
 
+// Функция отображения заданных для симуляции параметров
+void log_parameters() {
+  log_event("Параметры задачи:\n");
+  log_event("Количество пациентов: %d\n", N);
+  log_event("Время приема дежурного врача (мс): %d\n", t_d);
+  log_event("Время приема специалиста (мс): %d\n", t_s);
+  log_event("Файл для вывода логов: %s\n\n", output_filename.c_str());
+}
+
 // Функция парсинга командной строки или файла
 bool parse_args(int argc, char **argv) {
   for (int i = 1; i < argc; i++) {
@@ -294,12 +303,13 @@ bool parse_args(int argc, char **argv) {
         t_d = atoi(line.substr(4).c_str());
       } else if (line.find("t_s=") == 0) {
         t_s = atoi(line.substr(4).c_str());
-      } else if (line.find("output=") == 0) {
+      } else if (line.find("o=") == 0) {
         output_filename = line.substr(7);
       }
     }
   }
 
+  log_parameters();
   return true;
 }
 
@@ -363,12 +373,10 @@ int main(int argc, char **argv) {
   }
 
   // Это должно было уже выполниться при завершении всех потоков пациентов,
-  // но... на всякий случай тут тоже убедимся
-  for (int i = 0; i < 2; i++) {
-    pthread_mutex_lock(&commonQueueLock);
-    pthread_cond_broadcast(&commonQueueNotEmpty);
-    pthread_mutex_unlock(&commonQueueLock);
-  }
+  // но... на всякий случай тут тоже убедимся.
+  pthread_mutex_lock(&commonQueueLock);
+  pthread_cond_broadcast(&commonQueueNotEmpty);
+  pthread_mutex_unlock(&commonQueueLock);
 
   // Все дежурные завершились, значит patients_to_specialist == N.
   // Пробудим всех специалистов, если кто-то ещё спит.
