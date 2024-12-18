@@ -392,7 +392,21 @@ int main(int argc, char **argv) {
   }
 
   log_event("Рабочий день в больнице завершен\n");
+  
+  // Удаляем мьютексы и условные переменные
+  for (int i = 0; i < 3; i++) {
+    pthread_mutex_destroy(&specialistLock[i]);
+    pthread_cond_destroy(&specialistNotEmpty[i]);
+  }
+  pthread_mutex_destroy(&commonQueueLock);
+  pthread_cond_destroy(&commonQueueNotEmpty);
+
+  pthread_mutex_destroy(&consoleLogLock);
+  pthread_mutex_destroy(&fileLogLock);
+  pthread_mutex_destroy(&patients_to_specialist_lock);
+
   fclose(log_file);
+  delete[] patients;
 
   return 0;
 }
