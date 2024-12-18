@@ -1,43 +1,43 @@
-[00:00:148] Параметры задачи:
-[00:00:150] Количество пациентов: 5
-[00:00:151] Время приема дежурного врача (мс): 1000
-[00:00:153] Время приема специалиста (мс): 2000
-[00:00:154] Файл для вывода логов: data/clinic_log.txt
+[00:00:003] Simulation Parameters:
+[00:00:003] Number of patients: 5
+[00:00:003] Duty doctor's processing time (ms): 1000
+[00:00:003] Specialist's treatment time (ms): 2000
+[00:00:003] Log file: data/clinic_log.txt
 
-[00:00:181] Пациент P1 встал в очередь к дежурным
-[00:00:186] Дежурный D1 принял пациента P1
-[00:00:186] Пациент P3 встал в очередь к дежурным
-[00:00:190] Дежурный D2 принял пациента P3
-[00:00:190] Пациент P4 встал в очередь к дежурным
-[00:00:193] Пациент P5 встал в очередь к дежурным
-[00:00:194] Пациент P2 встал в очередь к дежурным
-[00:01:197] Дежурный D2 направил пациента P3 к стоматологу
-[00:01:197] Дежурный D1 направил пациента P1 к терапевту
-[00:01:200] Дежурный D2 принял пациента P4
-[00:01:200] Стоматолог начал лечение пациента P3
-[00:01:202] Дежурный D1 принял пациента P5
-[00:01:202] Терапевт начал лечение пациента P1
-[00:02:206] Дежурный D2 направил пациента P4 к хирургу
-[00:02:217] Дежурный D2 принял пациента P2
-[00:02:217] Хирург начал лечение пациента P4
-[00:02:222] Дежурный D1 направил пациента P5 к хирургу
-[00:03:212] Стоматолог закончил лечение пациента P3
-[00:03:212] Терапевт закончил лечение пациента P1
-[00:03:221] Пациент P3 полностью вылечен и пошел домой
-[00:03:226] Пациент P1 полностью вылечен и пошел домой
-[00:03:228] Дежурный D2 направил пациента P2 к стоматологу
-[00:03:234] Дежурный D2 закончил свой рабочий день
-[00:03:234] Дежурный D1 закончил свой рабочий день
-[00:03:234] Стоматолог начал лечение пациента P2
-[00:03:234] Терапевт закончил свой рабочий день
-[00:04:233] Хирург закончил лечение пациента P4
-[00:04:241] Хирург начал лечение пациента P5
-[00:04:241] Пациент P4 полностью вылечен и пошел домой
-[00:05:254] Стоматолог закончил лечение пациента P2
-[00:05:263] Стоматолог закончил свой рабочий день
-[00:05:263] Пациент P2 полностью вылечен и пошел домой
-[00:06:259] Хирург закончил лечение пациента P5
-[00:06:266] Хирург закончил свой рабочий день
-[00:06:266] Пациент P5 полностью вылечен и пошел домой
-[00:06:279] Все пациенты вылечены
-[00:06:283] Рабочий день в больнице завершен
+[00:00:004] Patient P1 entered the queue to duty doctors
+[00:00:004] Duty Doctor D2 accepted patient P1
+[00:00:004] Patient P3 entered the queue to duty doctors
+[00:00:004] Duty Doctor D1 accepted patient P3
+[00:00:004] Patient P2 entered the queue to duty doctors
+[00:00:004] Patient P4 entered the queue to duty doctors
+[00:00:005] Patient P5 entered the queue to duty doctors
+[00:01:004] Duty Doctor D1 referred patient P3 to Therapist
+[00:01:004] Duty Doctor D1 accepted patient P2
+[00:01:004] Duty Doctor D2 referred patient P1 to Surgeon
+[00:01:004] Duty Doctor D2 accepted patient P4
+[00:01:005] Therapist started treating patient P3
+[00:01:004] Surgeon started treating patient P1
+[00:02:005] Duty Doctor D1 referred patient P2 to Therapist
+[00:02:005] Duty Doctor D1 accepted patient P5
+[00:02:005] Duty Doctor D2 referred patient P4 to Dentist
+[00:02:006] Dentist started treating patient P4
+[00:03:005] Duty Doctor D1 referred patient P5 to Therapist
+[00:03:005] Duty Doctor D1 ended his workday
+[00:03:005] Duty Doctor D2 ended his workday
+[00:03:005] Surgeon finished treating patient P1
+[00:03:005] Therapist finished treating patient P3
+[00:03:005] Surgeon ended his workday
+[00:03:005] Patient P1 fully treated and went home
+[00:03:005] Therapist started treating patient P2
+[00:03:005] Patient P3 fully treated and went home
+[00:04:007] Dentist finished treating patient P4
+[00:04:007] Dentist ended his workday
+[00:04:007] Patient P4 fully treated and went home
+[00:05:006] Therapist finished treating patient P2
+[00:05:006] Therapist started treating patient P5
+[00:05:006] Patient P2 fully treated and went home
+[00:07:006] Therapist finished treating patient P5
+[00:07:006] Therapist ended his workday
+[00:07:006] Patient P5 fully treated and went home
+[00:07:007] All patients have been treated
+[00:07:007] The hospital workday has ended
