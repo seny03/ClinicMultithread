@@ -7,13 +7,13 @@
 #include <pthread.h> // Подключаем библиотеку для работы с потоками POSIX (pthread_*)
 #include <queue> // Подключаем контейнер очередь (std::queue)
 #include <random> // Подключаем библиотеку для работы со случайными числами (std::random)
-#include <string> // Подключаем класс std::string
+#include <stdarg.h> // Подключаем для работы с variadic аргументами (va_list)
+#include <string>   // Подключаем класс std::string
 
 #if _WIN32                // Если компиляция под Windows
 #include <windows.h>      // Подключаем Windows.h для Sleep
 #define sleep(x) Sleep(x) // Определяем sleep как Sleep
 #else                     // Иначе (Linux/UNIX)
-#include <stdarg.h> // Подключаем для работы с variadic аргументами (va_list)
 #include <unistd.h> // Подключаем для работы с UNIX-функциями (usleep)
 #define sleep(x) usleep(1000L * x) // Определяем sleep(x) через usleep
 #endif
