@@ -1,0 +1,43 @@
+[00:00:006] Simulation Parameters:
+[00:00:007] Number of patients: 5
+[00:00:007] Duty doctor's processing time (ms): 200
+[00:00:007] Specialist's treatment time (ms): 2000
+[00:00:007] Log file: data/output3.txt
+
+[00:00:009] Patient P1 entered the queue to duty doctors
+[00:00:009] Duty Doctor D1 accepted patient P1
+[00:00:009] Patient P3 entered the queue to duty doctors
+[00:00:009] Duty Doctor D2 accepted patient P3
+[00:00:009] Patient P5 entered the queue to duty doctors
+[00:00:009] Patient P4 entered the queue to duty doctors
+[00:00:010] Patient P2 entered the queue to duty doctors
+[00:00:209] Duty Doctor D1 referred patient P1 to Dentist
+[00:00:210] Duty Doctor D1 accepted patient P5
+[00:00:209] Duty Doctor D2 referred patient P3 to Dentist
+[00:00:210] Duty Doctor D2 accepted patient P4
+[00:00:210] Dentist started treating patient P1
+[00:00:410] Duty Doctor D1 referred patient P5 to Surgeon
+[00:00:410] Duty Doctor D2 referred patient P4 to Therapist
+[00:00:410] Duty Doctor D1 accepted patient P2
+[00:00:410] Therapist started treating patient P4
+[00:00:410] Surgeon started treating patient P5
+[00:00:610] Duty Doctor D1 referred patient P2 to Dentist
+[00:00:610] Duty Doctor D1 ended his workday
+[00:00:611] Duty Doctor D2 ended his workday
+[00:02:210] Dentist finished treating patient P1
+[00:02:210] Dentist started treating patient P3
+[00:02:210] Patient P1 fully treated and went home
+[00:02:414] Therapist finished treating patient P4
+[00:02:414] Therapist ended his workday
+[00:02:414] Surgeon finished treating patient P5
+[00:02:414] Patient P4 fully treated and went home
+[00:02:414] Surgeon ended his workday
+[00:02:415] Patient P5 fully treated and went home
+[00:04:211] Dentist finished treating patient P3
+[00:04:211] Dentist started treating patient P2
+[00:04:211] Patient P3 fully treated and went home
+[00:06:211] Dentist finished treating patient P2
+[00:06:211] Dentist ended his workday
+[00:06:211] Patient P2 fully treated and went home
+[00:06:212] All patients have been treated
+[00:06:212] The hospital workday has ended

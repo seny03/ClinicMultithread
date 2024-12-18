@@ -1,0 +1,4 @@
+N=7
+t_d=2000
+t_s=500
+o=data/output2.txt

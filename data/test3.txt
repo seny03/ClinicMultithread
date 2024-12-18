@@ -1,0 +1,4 @@
+N=8
+t_d=200
+t_s=2000
+o=data/output3.txt

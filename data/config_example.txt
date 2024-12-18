@@ -1,4 +1,4 @@
-N=10
+N=5
 t_d=1400
 t_s=3000
 o=data/clinic_log.txt
