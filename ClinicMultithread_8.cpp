@@ -7,13 +7,16 @@
 #include <pthread.h>
 #include <queue>
 #include <random>
+#include <string>
+
 #if _WIN32
 #include <windows.h>
 #define sleep(x) Sleep(x)
 #else
+#include <stdarg.h>
 #include <unistd.h>
+#define sleep(x) usleep(1000L * x)
 #endif
-#include <string>
 
 // Структура пациента
 enum SpecialistType { NONE = -1, DENTIST = 0, SURGEON = 1, THERAPIST = 2 };
@@ -49,12 +52,13 @@ pthread_cond_t commonQueueNotEmpty = PTHREAD_COND_INITIALIZER;
 std::queue<Patient *> specialistQueue[3];
 pthread_mutex_t specialistLock[3];
 pthread_cond_t specialistNotEmpty[3];
+
 pthread_mutex_t consoleLogLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t fileLogLock = PTHREAD_MUTEX_INITIALIZER;
 
-// Флаг остановки обработки
-bool stopProcessing = false;
-bool allDutyDoctorsFinished = false;
+// Новые глобальные переменные для подсчета направленных к специалисту пациентов
+int patients_to_specialist = 0;
+pthread_mutex_t patients_to_specialist_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // Файл вывода
 FILE *log_file = NULL;
@@ -73,7 +77,7 @@ std::string get_time_since_start() {
   int minutes = elapsed / 60000;
   int seconds = (elapsed / 1000) % 60;
   int milliseconds = elapsed % 1000;
-  char buffer[20];
+  char buffer[30];
   sprintf(buffer, "[%02d:%02d:%03d]", minutes, seconds, milliseconds);
   return std::string(buffer);
 }
@@ -82,6 +86,9 @@ std::string get_time_since_start() {
 void log_event(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
+
+  va_list args2;
+  va_copy(args2, args);
 
   std::string time_str = get_time_since_start();
   // Вывод в консоль
@@ -94,11 +101,8 @@ void log_event(const char *fmt, ...) {
   if (log_file) {
     pthread_mutex_lock(&fileLogLock);
     fprintf(log_file, "%s ", time_str.c_str());
-    va_list args2;
-    va_copy(args2, args);
     vfprintf(log_file, fmt, args2);
     pthread_mutex_unlock(&fileLogLock);
-
     va_end(args2);
   }
   va_end(args);
@@ -107,7 +111,8 @@ void log_event(const char *fmt, ...) {
 // Поток пациента
 void *patient_thread(void *arg) {
   int pid = *(int *)arg;
-  // Пациент приходит и становится в очередь к дежурным
+  delete (int *)arg; // освободим память под id
+
   Patient *p = new Patient();
   p->id = pid;
   p->specialist_type = NONE;
@@ -115,7 +120,6 @@ void *patient_thread(void *arg) {
   pthread_mutex_lock(&commonQueueLock);
   commonQueue.push(p);
   log_event("Пациент P%d встал в очередь к дежурным\n", p->id);
-
   pthread_cond_signal(&commonQueueNotEmpty);
   pthread_mutex_unlock(&commonQueueLock);
 
@@ -132,32 +136,39 @@ void *patient_thread(void *arg) {
 // Поток дежурного врача
 void *duty_doctor_thread(void *arg) {
   int did = *(int *)arg;
+  delete (int *)arg;
+
   while (true) {
     pthread_mutex_lock(&commonQueueLock);
-    while (commonQueue.empty() && !stopProcessing) {
+
+    while (commonQueue.empty()) {
+      // Проверяем, не обработаны ли все пациенты
+      pthread_mutex_lock(&patients_to_specialist_lock);
+      bool all_sent = (patients_to_specialist == N);
+      pthread_mutex_unlock(&patients_to_specialist_lock);
+
+      if (all_sent) {
+        pthread_mutex_unlock(&commonQueueLock);
+        goto end_duty;
+      }
+
       pthread_cond_wait(&commonQueueNotEmpty, &commonQueueLock);
     }
 
-    if (stopProcessing && commonQueue.empty()) {
-      pthread_mutex_unlock(&commonQueueLock);
-      break;
-    }
-
+    // Здесь очередь не пуста, берем пациента
     Patient *p = commonQueue.front();
     commonQueue.pop();
     pthread_mutex_unlock(&commonQueueLock);
 
     // Принимаем пациента
     log_event("Дежурный D%d принял пациента P%d\n", did, p->id);
-    // Имитируем время приема
     sleep(t_d);
 
-    // Определяем специалиста (случайно)
+    // Определяем специалиста
     p->specialist_type = static_cast<SpecialistType>(specialist_dist(rng));
     const char *specName = (p->specialist_type == DENTIST) ? "стоматологу"
                            : (p->specialist_type == SURGEON) ? "хирургу"
                                                              : "терапевту";
-
     log_event("Дежурный D%d направил пациента P%d к %s\n", did, p->id,
               specName);
 
@@ -166,7 +177,28 @@ void *duty_doctor_thread(void *arg) {
     specialistQueue[p->specialist_type].push(p);
     pthread_cond_signal(&specialistNotEmpty[p->specialist_type]);
     pthread_mutex_unlock(&specialistLock[p->specialist_type]);
+
+    // Увеличиваем счетчик направленных пациентов
+    pthread_mutex_lock(&patients_to_specialist_lock);
+    patients_to_specialist++;
+    bool now_all_sent = (patients_to_specialist == N);
+    pthread_mutex_unlock(&patients_to_specialist_lock);
+
+    // Если теперь все пациенты направлены, разбудим все потоки, чтобы они
+    // проверили свои условия
+    if (now_all_sent) {
+      pthread_mutex_lock(&commonQueueLock);
+      pthread_cond_broadcast(&commonQueueNotEmpty);
+      pthread_mutex_unlock(&commonQueueLock);
+      for (int i = 0; i < 3; i++) {
+        pthread_mutex_lock(&specialistLock[i]);
+        pthread_cond_broadcast(&specialistNotEmpty[i]);
+        pthread_mutex_unlock(&specialistLock[i]);
+      }
+    }
   }
+
+end_duty:
   log_event("Дежурный D%d закончил свой рабочий день\n", did);
   return NULL;
 }
@@ -174,48 +206,67 @@ void *duty_doctor_thread(void *arg) {
 // Поток специалиста
 void *specialist_thread(void *arg) {
   int sid = *(int *)arg;
+  delete (int *)arg;
+
   const char *specName = (sid == 0)   ? "Стоматолог"
                          : (sid == 1) ? "Хирург"
                                       : "Терапевт";
 
   while (true) {
     pthread_mutex_lock(&specialistLock[sid]);
-    while (specialistQueue[sid].empty() && !stopProcessing) {
-      pthread_cond_wait(&specialistNotEmpty[sid], &specialistLock[sid]);
-    }
+    while (specialistQueue[sid].empty()) {
+      pthread_mutex_lock(&patients_to_specialist_lock);
+      bool all_sent = (patients_to_specialist == N);
+      pthread_mutex_unlock(&patients_to_specialist_lock);
 
-    if (stopProcessing && specialistQueue[sid].empty()) {
-      pthread_mutex_unlock(&specialistLock[sid]);
-      break;
+      if (all_sent && specialistQueue[sid].empty()) {
+        // Все пациенты уже направлены и очередь пуста - выходим
+        pthread_mutex_unlock(&specialistLock[sid]);
+        goto end_specialist;
+      }
+
+      pthread_cond_wait(&specialistNotEmpty[sid], &specialistLock[sid]);
     }
 
     Patient *p = specialistQueue[sid].front();
     specialistQueue[sid].pop();
     pthread_mutex_unlock(&specialistLock[sid]);
 
-    // Лечение
+    // Лечение пациента
     log_event("%s начал лечение пациента P%d\n", specName, p->id);
     sleep(t_s);
     log_event("%s закончил лечение пациента P%d\n", specName, p->id);
 
-    // Уведомление потока с пациентом, о том, что его вылечили
+    // Уведомляем пациента
     pthread_mutex_lock(&p->patientLock);
     pthread_cond_signal(&p->treated);
     pthread_mutex_unlock(&p->patientLock);
   }
 
+end_specialist:
   log_event("%s закончил свой рабочий день\n", specName);
   return NULL;
 }
 
+// Функция отображения справки
+void print_help() {
+  std::cout << "Usage: program [options]\n"
+            << "Options:\n"
+            << "  -f <file>      Load parameters from configuration file\n"
+            << "  -n <number>    Number of patients\n"
+            << "  -t_d <ms>      Time for duty doctor to process a patient\n"
+            << "  -t_s <ms>      Time for specialist to treat a patient\n"
+            << "  -o <file>      Output log file\n"
+            << "  --help [-h]    Display this help message\n";
+}
+
 // Функция парсинга командной строки или файла
 bool parse_args(int argc, char **argv) {
-  // Простенький парсер
-  // Формат:
-  // -f config.txt  или
-  // -n 5 -t_d 1 -t_s 2 -o out.txt
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
+    if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+      print_help();
+      exit(0);
+    } else if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
       from_file = true;
       config_filename = argv[++i];
     } else if (strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
@@ -257,6 +308,7 @@ int main(int argc, char **argv) {
   srand(time(NULL));
 
   if (!parse_args(argc, argv)) {
+    std::cerr << "Ошибка при чтении параметров\n";
     return 1;
   }
 
@@ -296,55 +348,42 @@ int main(int argc, char **argv) {
     pthread_join(patients[i], NULL);
   }
 
-  // Ждем, пока все пациенты будут обработаны дежурными врачами
-  bool allQueuesEmpty;
-  do {
+  log_event("Все пациенты вылечены\n");
+
+  for (int i = 0; i < 2; i++) {
     pthread_mutex_lock(&commonQueueLock);
-    allQueuesEmpty = commonQueue.empty();
+    pthread_cond_broadcast(&commonQueueNotEmpty);
     pthread_mutex_unlock(&commonQueueLock);
-    sleep(1);
-  } while (!allQueuesEmpty);
+  }
 
-  // Устанавливаем флаг остановки для дежурных врачей
-  pthread_mutex_lock(&commonQueueLock);
-  stopProcessing = true;
-  pthread_cond_broadcast(&commonQueueNotEmpty);
-  pthread_mutex_unlock(&commonQueueLock);
-
-  // Ждем завершения потоков дежурных врачей
+  // Все пациенты уже пришли и ушли. Дежурные закончат, когда направят всех N
+  // пациентов. После чего завершим дежурных.
   for (int i = 0; i < 2; i++) {
     pthread_join(duty_docs[i], NULL);
   }
 
-  // Ждем, пока все пациенты будут обработаны специалистами
-  do {
-    allQueuesEmpty = true;
-    for (int i = 0; i < 3; i++) {
-      pthread_mutex_lock(&specialistLock[i]);
-      if (!specialistQueue[i].empty()) {
-        allQueuesEmpty = false;
-      }
-      pthread_mutex_unlock(&specialistLock[i]);
-    }
-    sleep(1);
-  } while (!allQueuesEmpty);
-
-  // Устанавливаем флаг остановки и пробуждаем всех специалистов
-  pthread_mutex_lock(&commonQueueLock);
-  stopProcessing = true;
-  pthread_mutex_unlock(&commonQueueLock);
-
-  for (int i = 0; i < 3; i++) {
-    pthread_cond_broadcast(&specialistNotEmpty[i]);
+  // Это должно было уже выполниться при завершении всех потоков пациентов,
+  // но... на всякий случай тут тоже убедимся
+  for (int i = 0; i < 2; i++) {
+    pthread_mutex_lock(&commonQueueLock);
+    pthread_cond_broadcast(&commonQueueNotEmpty);
+    pthread_mutex_unlock(&commonQueueLock);
   }
 
-  // Ждем завершения потоков специалистов
+  // Все дежурные завершились, значит patients_to_specialist == N.
+  // Пробудим всех специалистов, если кто-то ещё спит.
+  for (int i = 0; i < 3; i++) {
+    pthread_mutex_lock(&specialistLock[i]);
+    pthread_cond_broadcast(&specialistNotEmpty[i]);
+    pthread_mutex_unlock(&specialistLock[i]);
+  }
+
+  // Ждем завершения всех специалистов
   for (int i = 0; i < 3; i++) {
     pthread_join(specialists[i], NULL);
   }
 
-  log_event("Все пациенты вылечены\n");
-
+  log_event("Рабочий день в больнице завершен\n");
   fclose(log_file);
 
   return 0;
