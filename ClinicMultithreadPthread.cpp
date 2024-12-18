@@ -372,7 +372,7 @@ bool parse_args(int argc, char **argv) {
       } else if (line.find("t_s=") == 0) {
         t_s = atoi(line.substr(4).c_str()); // Читаем t_s
       } else if (line.find("o=") == 0) {
-        output_filename = line.substr(7); // Читаем имя файла логов
+        output_filename = line.substr(2); // Читаем имя файла логов
       }
     }
   }
